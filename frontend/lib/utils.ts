@@ -1,8 +1,23 @@
 import { type OrderStatus } from '@/types';
 
-export function cn(...classes: (string | undefined | null | false)[]): string {
-  return classes.filter(Boolean).join(' ');
+type ClassValue = string | number | boolean | undefined | null | ClassValue[];
+
+export function cn(...classes: ClassValue[]): string {
+  const flat: string[] = [];
+  const process = (val: ClassValue) => {
+    if (!val) return;
+    if (typeof val === 'string') {
+      flat.push(val);
+    } else if (typeof val === 'number') {
+      flat.push(String(val));
+    } else if (Array.isArray(val)) {
+      val.forEach(process);
+    }
+  };
+  classes.forEach(process);
+  return flat.join(' ');
 }
+
 
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-IN', {
@@ -67,37 +82,37 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
 };
 
 export const STATUS_COLORS: Record<OrderStatus, string> = {
-  CREATED: 'bg-slate-100 text-slate-700',
-  ASSIGNED: 'bg-blue-100 text-blue-700',
-  PICKED_UP: 'bg-indigo-100 text-indigo-700',
-  IN_TRANSIT: 'bg-violet-100 text-violet-700',
-  OUT_FOR_DELIVERY: 'bg-amber-100 text-amber-700',
-  DELIVERED: 'bg-emerald-100 text-emerald-700',
-  FAILED: 'bg-red-100 text-red-700',
-  RESCHEDULED: 'bg-orange-100 text-orange-700',
-  CANCELLED: 'bg-gray-100 text-gray-500',
+  CREATED:          'bg-[#E0E5EC] text-[#5a6580] ring-1 ring-[rgba(163,177,198,0.5)]',
+  ASSIGNED:         'bg-[#E0E5EC] text-[#4f6ac0] ring-1 ring-[rgba(79,106,192,0.3)]',
+  PICKED_UP:        'bg-[#E0E5EC] text-[#6C63FF] ring-1 ring-[rgba(108,99,255,0.35)]',
+  IN_TRANSIT:       'bg-[#E0E5EC] text-[#7c5cbf] ring-1 ring-[rgba(124,92,191,0.3)]',
+  OUT_FOR_DELIVERY: 'bg-[#E0E5EC] text-[#c07b28] ring-1 ring-[rgba(192,123,40,0.35)]',
+  DELIVERED:        'bg-[#E0E5EC] text-[#2d8a6e] ring-1 ring-[rgba(56,178,172,0.4)]',
+  FAILED:           'bg-[#E0E5EC] text-[#b94040] ring-1 ring-[rgba(185,64,64,0.35)]',
+  RESCHEDULED:      'bg-[#E0E5EC] text-[#b86a2e] ring-1 ring-[rgba(184,106,46,0.35)]',
+  CANCELLED:        'bg-[#E0E5EC] text-[#7a8494] ring-1 ring-[rgba(122,132,148,0.3)]',
 };
 
 export const STATUS_DOT: Record<OrderStatus, string> = {
-  CREATED: 'bg-slate-400',
-  ASSIGNED: 'bg-blue-500',
-  PICKED_UP: 'bg-indigo-500',
-  IN_TRANSIT: 'bg-violet-500',
-  OUT_FOR_DELIVERY: 'bg-amber-500',
-  DELIVERED: 'bg-emerald-500',
-  FAILED: 'bg-red-500',
-  RESCHEDULED: 'bg-orange-500',
-  CANCELLED: 'bg-gray-400',
+  CREATED:          'bg-[#8c97b0]',
+  ASSIGNED:         'bg-[#4f6ac0]',
+  PICKED_UP:        'bg-[#6C63FF]',
+  IN_TRANSIT:       'bg-[#7c5cbf]',
+  OUT_FOR_DELIVERY: 'bg-[#c07b28]',
+  DELIVERED:        'bg-[#38B2AC]',
+  FAILED:           'bg-[#b94040]',
+  RESCHEDULED:      'bg-[#b86a2e]',
+  CANCELLED:        'bg-[#9ca3af]',
 };
 
 export const AGENT_STATUS_COLORS: Record<string, string> = {
-  AVAILABLE: 'bg-emerald-100 text-emerald-700',
-  BUSY: 'bg-amber-100 text-amber-700',
-  OFFLINE: 'bg-gray-100 text-gray-500',
+  AVAILABLE: 'bg-[#E0E5EC] text-[#2d8a6e] ring-1 ring-[rgba(56,178,172,0.4)]',
+  BUSY:      'bg-[#E0E5EC] text-[#c07b28] ring-1 ring-[rgba(192,123,40,0.35)]',
+  OFFLINE:   'bg-[#E0E5EC] text-[#7a8494] ring-1 ring-[rgba(122,132,148,0.3)]',
 };
 
 export const RISK_COLORS = {
-  LOW: { bg: 'bg-emerald-100', text: 'text-emerald-700', bar: 'bg-emerald-500' },
-  MEDIUM: { bg: 'bg-amber-100', text: 'text-amber-700', bar: 'bg-amber-500' },
-  HIGH: { bg: 'bg-red-100', text: 'text-red-700', bar: 'bg-red-500' },
+  LOW:    { bg: 'bg-[#E0E5EC]', text: 'text-[#38B2AC]', bar: 'bg-[#38B2AC]' },
+  MEDIUM: { bg: 'bg-[#E0E5EC]', text: 'text-[#c07b28]', bar: 'bg-[#c07b28]' },
+  HIGH:   { bg: 'bg-[#E0E5EC]', text: 'text-[#b94040]', bar: 'bg-[#b94040]' },
 };

@@ -1,63 +1,138 @@
 @import "tailwindcss";
 
+/* ─── Design Tokens ──────────────────────────────────────────────────────── */
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --neu-bg: #E0E5EC;
+  --neu-fg: #3D4852;
+  --neu-muted: #6B7280;
+  --neu-accent: #6C63FF;
+  --neu-accent-light: #8B84FF;
+  --neu-accent-secondary: #38B2AC;
+
+  /* Shadow primitives */
+  --shadow-light: rgba(255, 255, 255, 0.5);
+  --shadow-dark: rgba(163, 177, 198, 0.6);
+
+  /* Semantic shadows */
+  --shadow-extruded: 9px 9px 16px rgba(163, 177, 198, 0.6), -9px -9px 16px rgba(255, 255, 255, 0.5);
+  --shadow-extruded-hover: 12px 12px 20px rgba(163, 177, 198, 0.7), -12px -12px 20px rgba(255, 255, 255, 0.6);
+  --shadow-extruded-sm: 5px 5px 10px rgba(163, 177, 198, 0.6), -5px -5px 10px rgba(255, 255, 255, 0.5);
+  --shadow-inset: inset 6px 6px 10px rgba(163, 177, 198, 0.6), inset -6px -6px 10px rgba(255, 255, 255, 0.5);
+  --shadow-inset-deep: inset 10px 10px 20px rgba(163, 177, 198, 0.7), inset -10px -10px 20px rgba(255, 255, 255, 0.6);
+  --shadow-inset-sm: inset 3px 3px 6px rgba(163, 177, 198, 0.6), inset -3px -3px 6px rgba(255, 255, 255, 0.5);
+
+  --background: var(--neu-bg);
+  --foreground: var(--neu-fg);
 }
 
-* {
+/* ─── Global Resets ──────────────────────────────────────────────────────── */
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--neu-bg);
+  color: var(--neu-fg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom scrollbar */
+/* ─── Focus Rings ──────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--neu-accent);
+  outline-offset: 3px;
+  border-radius: 12px;
+}
+
+/* ─── Scrollbar (Neumorphic) ─────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: var(--neu-bg);
+  box-shadow: var(--shadow-inset-sm);
+  border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
+  background: rgba(163, 177, 198, 0.7);
+  border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: rgba(108, 99, 255, 0.5);
 }
 
-/* Smooth focus rings */
-:focus-visible {
-  outline: 2px solid #6366f1;
-  outline-offset: 2px;
-}
-
-/* Table improvements */
+/* ─── Table ──────────────────────────────────────────────────────────────── */
 table {
   border-collapse: collapse;
 }
 
-/* Animation utilities */
+/* ─── Animations ─────────────────────────────────────────────────────────── */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-
 .animate-fade-in {
-  animation: fadeIn 0.2s ease-out;
+  animation: fadeIn 0.25s ease-out;
 }
 
 @keyframes slideIn {
-  from { opacity: 0; transform: translateX(-8px); }
-  to { opacity: 1; transform: translateX(0); }
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in {
+  animation: slideIn 0.2s ease-out;
 }
 
-.animate-slide-in {
-  animation: slideIn 0.15s ease-out;
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes neuSpin {
+  to { transform: rotate(360deg); }
+}
+.animate-neu-spin {
+  animation: neuSpin 0.9s linear infinite;
+}
+
+/* ─── Neumorphic Utility Classes ─────────────────────────────────────────── */
+.neu-surface {
+  background: var(--neu-bg);
+  box-shadow: var(--shadow-extruded);
+}
+.neu-surface-sm {
+  background: var(--neu-bg);
+  box-shadow: var(--shadow-extruded-sm);
+}
+.neu-surface-hover {
+  box-shadow: var(--shadow-extruded-hover);
+  transform: translateY(-2px);
+}
+.neu-inset {
+  background: var(--neu-bg);
+  box-shadow: var(--shadow-inset);
+}
+.neu-inset-deep {
+  background: var(--neu-bg);
+  box-shadow: var(--shadow-inset-deep);
+}
+.neu-inset-sm {
+  background: var(--neu-bg);
+  box-shadow: var(--shadow-inset-sm);
+}
+
+/* ─── Font Utilities ──────────────────────────────────────────────────────── */
+.font-display {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.font-body {
+  font-family: 'DM Sans', sans-serif;
 }

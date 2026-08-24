@@ -6,39 +6,27 @@ import type { TrackingEvent, OrderStatus } from '@/types';
 import { Package, User, CheckCircle, MapPin, AlertCircle, RotateCcw, XCircle, Truck } from 'lucide-react';
 
 const STATUS_ICONS: Record<OrderStatus, React.ReactNode> = {
-  CREATED: <Package size={14} />,
-  ASSIGNED: <User size={14} />,
-  PICKED_UP: <Package size={14} />,
-  IN_TRANSIT: <Truck size={14} />,
+  CREATED:          <Package size={14} />,
+  ASSIGNED:         <User size={14} />,
+  PICKED_UP:        <Package size={14} />,
+  IN_TRANSIT:       <Truck size={14} />,
   OUT_FOR_DELIVERY: <MapPin size={14} />,
-  DELIVERED: <CheckCircle size={14} />,
-  FAILED: <AlertCircle size={14} />,
-  RESCHEDULED: <RotateCcw size={14} />,
-  CANCELLED: <XCircle size={14} />,
+  DELIVERED:        <CheckCircle size={14} />,
+  FAILED:           <AlertCircle size={14} />,
+  RESCHEDULED:      <RotateCcw size={14} />,
+  CANCELLED:        <XCircle size={14} />,
 };
 
-const STATUS_BG: Record<OrderStatus, string> = {
-  CREATED: 'bg-slate-100 text-slate-600',
-  ASSIGNED: 'bg-blue-100 text-blue-600',
-  PICKED_UP: 'bg-indigo-100 text-indigo-600',
-  IN_TRANSIT: 'bg-violet-100 text-violet-600',
-  OUT_FOR_DELIVERY: 'bg-amber-100 text-amber-600',
-  DELIVERED: 'bg-emerald-100 text-emerald-600',
-  FAILED: 'bg-red-100 text-red-600',
-  RESCHEDULED: 'bg-orange-100 text-orange-600',
-  CANCELLED: 'bg-gray-100 text-gray-400',
-};
-
-const STATUS_LINE: Record<OrderStatus, string> = {
-  CREATED: 'border-slate-300',
-  ASSIGNED: 'border-blue-400',
-  PICKED_UP: 'border-indigo-400',
-  IN_TRANSIT: 'border-violet-400',
-  OUT_FOR_DELIVERY: 'border-amber-400',
-  DELIVERED: 'border-emerald-400',
-  FAILED: 'border-red-400',
-  RESCHEDULED: 'border-orange-400',
-  CANCELLED: 'border-gray-300',
+const STATUS_ICON_COLORS: Record<OrderStatus, string> = {
+  CREATED:          'text-[#8c97b0]',
+  ASSIGNED:         'text-[#4f6ac0]',
+  PICKED_UP:        'text-[#6C63FF]',
+  IN_TRANSIT:       'text-[#7c5cbf]',
+  OUT_FOR_DELIVERY: 'text-[#c07b28]',
+  DELIVERED:        'text-[#38B2AC]',
+  FAILED:           'text-[#b94040]',
+  RESCHEDULED:      'text-[#b86a2e]',
+  CANCELLED:        'text-[#9ca3af]',
 };
 
 interface TrackingTimelineProps {
@@ -48,8 +36,8 @@ interface TrackingTimelineProps {
 export function TrackingTimeline({ events }: TrackingTimelineProps) {
   if (!events || events.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-400 text-sm">
-        No tracking events yet
+      <div className="text-center py-8 text-[#6B7280] text-sm">
+        No tracking events recorded yet
       </div>
     );
   }
@@ -64,43 +52,48 @@ export function TrackingTimeline({ events }: TrackingTimelineProps) {
         {sorted.map((event, idx) => {
           const isLast = idx === sorted.length - 1;
           const icon = STATUS_ICONS[event.status];
-          const bg = STATUS_BG[event.status];
-          const line = STATUS_LINE[event.status];
+          const iconColor = STATUS_ICON_COLORS[event.status];
 
           return (
             <div key={event.id} className="relative flex gap-4">
-              {/* Icon + Line */}
+              {/* Icon + Vertical Track */}
               <div className="flex flex-col items-center">
-                <div className={`flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0 ${bg} z-10`}>
+                {/* Neumorphic Icon Well — inset shadow circle */}
+                <div
+                  className={`flex items-center justify-center w-9 h-9 rounded-full flex-shrink-0 bg-[#E0E5EC] ${iconColor} z-10 shadow-[inset_3px_3px_6px_rgba(163,177,198,0.7),inset_-3px_-3px_6px_rgba(255,255,255,0.6)]`}
+                >
                   {icon}
                 </div>
                 {!isLast && (
-                  <div className={`w-0.5 flex-1 border-l-2 border-dashed mt-1 mb-1 ${line} min-h-[2rem]`} />
+                  // Inset track line
+                  <div className="w-0.5 flex-1 bg-[rgba(163,177,198,0.4)] my-1 min-h-[2rem] shadow-[1px_0_2px_rgba(255,255,255,0.6)]" />
                 )}
               </div>
 
-              {/* Content */}
+              {/* Event Card Content */}
               <div className="pb-6 flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <StatusBadge status={event.status} />
-                    {event.description && (
-                      <p className="mt-1 text-sm text-gray-600">{event.description}</p>
-                    )}
-                    {event.actor && (
-                      <p className="mt-0.5 text-xs text-gray-400">
-                        by {event.actor.name} ({event.actor.role})
-                      </p>
-                    )}
-                    {event.location && (
-                      <p className="mt-0.5 text-xs text-gray-400 flex items-center gap-1">
-                        <MapPin size={10} /> {event.location}
-                      </p>
-                    )}
+                <div className="p-4 rounded-2xl bg-[#E0E5EC] shadow-[5px_5px_10px_rgba(163,177,198,0.5),-5px_-5px_10px_rgba(255,255,255,0.5)]">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1">
+                      <StatusBadge status={event.status} />
+                      {event.description && (
+                        <p className="text-sm font-medium text-[#3D4852] mt-1.5">{event.description}</p>
+                      )}
+                      {event.actor && (
+                        <p className="text-xs text-[#6B7280]">
+                          by <span className="font-semibold text-[#3D4852]">{event.actor.name}</span> ({event.actor.role})
+                        </p>
+                      )}
+                      {event.location && (
+                        <p className="text-xs text-[#6B7280] flex items-center gap-1">
+                          <MapPin size={11} className="text-[#6C63FF]" /> {event.location}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-xs text-[#6B7280] font-mono whitespace-nowrap flex-shrink-0">
+                      {formatDateTime(event.timestamp)}
+                    </span>
                   </div>
-                  <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">
-                    {formatDateTime(event.timestamp)}
-                  </span>
                 </div>
               </div>
             </div>

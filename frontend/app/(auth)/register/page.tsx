@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, Card } from '@/components/ui';
 import { Truck, Mail, Lock, User, Phone, MapPin } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -15,9 +15,12 @@ export default function RegisterPage() {
       router.push(user.role === 'ADMIN' ? '/admin' : user.role === 'AGENT' ? '/agent' : '/customer');
     }
   }, [user, authLoading, router]);
+
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', address: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  if (authLoading) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,20 +37,22 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-8 bg-gradient-to-br from-indigo-50 via-white to-violet-50">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <Truck size={28} className="text-indigo-600" />
-            <span className="font-bold text-xl text-gray-900">LastMile Tracker</span>
+    <div className="min-h-screen flex items-center justify-center p-8 bg-[#E0E5EC]">
+      <div className="w-full max-w-md space-y-6">
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center gap-3 mb-2">
+            <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-[#E0E5EC] text-[#6C63FF] shadow-[7px_7px_14px_rgba(163,177,198,0.6),-7px_-7px_14px_rgba(255,255,255,0.5)]">
+              <Truck size={24} />
+            </div>
+            <span className="font-display font-extrabold text-2xl text-[#3D4852] tracking-tight">LastMile</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
-          <p className="text-gray-500 mt-1">Start tracking deliveries today</p>
+          <h1 className="font-display font-extrabold text-2xl text-[#3D4852]">Create Your Account</h1>
+          <p className="text-sm text-[#6B7280]">Start tracking and scheduling deliveries today</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+        <Card className="p-8 space-y-6">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+            <div className="p-4 rounded-2xl bg-[#E0E5EC] text-xs font-medium text-[#b94040] shadow-[inset_4px_4px_8px_rgba(163,177,198,0.6),inset_-4px_-4px_8px_rgba(255,255,255,0.5)] ring-1 ring-[rgba(185,64,64,0.3)]">
               {error}
             </div>
           )}
@@ -64,7 +69,7 @@ export default function RegisterPage() {
             />
             <Input
               id="email"
-              label="Email address"
+              label="Email Address"
               type="email"
               placeholder="you@example.com"
               value={form.email}
@@ -74,7 +79,7 @@ export default function RegisterPage() {
             />
             <Input
               id="phone"
-              label="Phone number"
+              label="Phone Number"
               type="tel"
               placeholder="+91-9800000000"
               value={form.phone}
@@ -93,24 +98,29 @@ export default function RegisterPage() {
             />
             <Input
               id="address"
-              label="Default Address"
-              placeholder="Your delivery address"
+              label="Default Delivery Address"
+              placeholder="12, Marine Drive, Mumbai"
               value={form.address}
               onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
               icon={<MapPin size={16} />}
             />
 
-            <Button type="submit" loading={loading} className="w-full" size="lg">
-              Create Account
-            </Button>
+            <div className="pt-2">
+              <Button type="submit" loading={loading} className="w-full" size="lg">
+                Create Account
+              </Button>
+            </div>
           </form>
 
-          <div className="mt-4 text-center">
-            <Link href="/login" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
-              Already have an account? Sign in
+          <div className="text-center pt-2">
+            <Link
+              href="/login"
+              className="text-xs font-semibold text-[#6C63FF] hover:text-[#8B84FF] transition-colors"
+            >
+              Already have an account? Sign in here
             </Link>
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );
