@@ -89,6 +89,12 @@ STATUS_NOTIFICATION_MAP = {
 }
 
 
+AGENT_STATUS_NOTIFICATION_MAP = {
+    "ASSIGNED": ("New Delivery Assigned", "You have been assigned order {tracking}. Please pick it up promptly.", "AGENT_ASSIGNED"),
+    "RESCHEDULED": ("Order Rescheduled", "Order {tracking} has been rescheduled. A new pickup may be needed.", "RESCHEDULED"),
+}
+
+
 def notify_order_status(
     db: Session,
     order: Order,
@@ -96,8 +102,10 @@ def notify_order_status(
     extra_message: Optional[str] = None,
 ) -> None:
     """
-    Send both in-app and email notifications for an order status change.
-    Gets recipient from the customer's user record.
+    Send in-app (and optionally email) notifications for an order status change.
+    - Always notifies the customer.
+    - Also notifies the agent for ASSIGNED/RESCHEDULED events.
+    Falls back to logging if email is not configured — never crashes.
     """
     try:
         tracking = order.tracking_number
@@ -112,30 +120,46 @@ def notify_order_status(
 
         notif_type = NotificationType[notif_type_str] if notif_type_str in NotificationType.__members__ else NotificationType.GENERAL
 
-        # Get customer user
+        # --- Notify Customer ---
         customer_profile = order.customer
-        if not customer_profile:
-            return
-        user = customer_profile.user
+        if customer_profile and customer_profile.user:
+            user = customer_profile.user
+            send_in_app(
+                db=db,
+                user_id=user.id,
+                title=title,
+                message=message,
+                notification_type=notif_type,
+                order_id=order.id,
+            )
+            send_email(
+                to_email=user.email,
+                subject=f"[LastMile] {title} — {tracking}",
+                body=message,
+            )
 
-        # In-app notification
-        send_in_app(
-            db=db,
-            user_id=user.id,
-            title=title,
-            message=message,
-            notification_type=notif_type,
-            order_id=order.id,
-        )
-
-        # Email notification (non-blocking)
-        send_email(
-            to_email=user.email,
-            subject=f"[LastMile] {title} — {tracking}",
-            body=message,
-        )
+        # --- Notify Agent (for ASSIGNED/RESCHEDULED) ---
+        agent_template = AGENT_STATUS_NOTIFICATION_MAP.get(status)
+        if agent_template and order.assigned_agent_id:
+            from app.models.models import DeliveryAgent
+            agent = db.query(DeliveryAgent).filter(
+                DeliveryAgent.id == order.assigned_agent_id
+            ).first()
+            if agent and agent.user_id:
+                a_title, a_msg_template, a_notif_type_str = agent_template
+                a_message = a_msg_template.format(tracking=tracking)
+                a_notif_type = NotificationType[a_notif_type_str] if a_notif_type_str in NotificationType.__members__ else NotificationType.GENERAL
+                send_in_app(
+                    db=db,
+                    user_id=agent.user_id,
+                    title=a_title,
+                    message=a_message,
+                    notification_type=a_notif_type,
+                    order_id=order.id,
+                )
 
         db.flush()
     except Exception as e:
         # Never crash due to notification failure
         logger.error(f"Notification error for order {order.id}: {e}")
+

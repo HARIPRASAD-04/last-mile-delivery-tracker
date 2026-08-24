@@ -2,7 +2,7 @@
 import React from 'react';
 import { cn, RISK_COLORS, formatTime } from '@/lib/utils';
 import type { DeliveryIntelligence } from '@/types';
-import { Shield, Clock, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { BarChart2, Clock, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 
 interface DeliveryIntelligenceCardProps {
   intelligence: DeliveryIntelligence;
@@ -13,7 +13,7 @@ export function DeliveryIntelligenceCard({ intelligence, compact = false }: Deli
   const { risk_category, risk_score, confidence, eta_from, eta_to, risk_factors, positive_factors } = intelligence;
   const colors = RISK_COLORS[risk_category];
 
-  const RiskIcon = risk_category === 'LOW' ? CheckCircle : risk_category === 'MEDIUM' ? AlertTriangle : AlertTriangle;
+  const RiskIcon = risk_category === 'LOW' ? CheckCircle : AlertTriangle;
 
   if (compact) {
     return (
@@ -37,14 +37,19 @@ export function DeliveryIntelligenceCard({ intelligence, compact = false }: Deli
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       {/* Header */}
       <div className={cn('px-6 py-4 flex items-center gap-3', colors.bg)}>
-        <Shield size={22} className={colors.text} />
+        <BarChart2 size={22} className={colors.text} />
         <div>
           <h3 className="font-semibold text-gray-900">Smart Delivery Intelligence</h3>
-          <p className="text-xs text-gray-500">Powered by logistics heuristics</p>
+          <p className="text-xs text-gray-500">
+            Deterministic logistics scoring — reproducible from order attributes
+          </p>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <span className={cn('px-3 py-1 rounded-full text-xs font-bold', colors.bg, colors.text, 'border border-current border-opacity-30')}>
             {risk_category} RISK
+          </span>
+          <span className="text-xs text-gray-400 font-mono bg-white/60 px-2 py-0.5 rounded-md">
+            Score: {risk_score}/100
           </span>
         </div>
       </div>
@@ -115,6 +120,16 @@ export function DeliveryIntelligenceCard({ intelligence, compact = false }: Deli
               </ul>
             </div>
           )}
+        </div>
+
+        {/* Scoring methodology note */}
+        <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg border border-blue-100">
+          <Info size={14} className="text-blue-500 mt-0.5 flex-shrink-0" />
+          <p className="text-xs text-blue-700">
+            Score is computed from: prior failures (+30/attempt), zone distance (+10–20),
+            agent assignment (+20 if missing), order age (+15 if &gt;24h), COD payment (+5).
+            Confidence = 100 − score.
+          </p>
         </div>
       </div>
     </div>

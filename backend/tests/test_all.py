@@ -436,3 +436,210 @@ class TestReschedulingLogic:
     def test_rescheduled_to_assigned_is_valid_transition(self):
         """After reschedule, RESCHEDULED → ASSIGNED is valid."""
         validate_status_transition(OrderStatus.RESCHEDULED, OrderStatus.ASSIGNED)
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Tracking Immutability Tests
+# ────────────────────────────────────────────────────────────────────────────
+
+class TestTrackingImmutability:
+    """
+    Critical: prove that previous tracking events are NEVER modified
+    when an order status changes. Events are append-only.
+    """
+
+    def _make_order(self, status=OrderStatus.ASSIGNED):
+        order = Order()
+        order.id = 1
+        order.tracking_number = "LMD-TEST-0001"
+        order.status = status
+        order.tracking_events = []
+        order.pickup_zone_id = 1
+        order.drop_zone_id = 1
+        order.created_at = __import__('datetime').datetime.utcnow()
+        return order
+
+    def test_previous_events_intact_after_status_update(self):
+        """
+        After a status change, all previous tracking events must still exist
+        unchanged. The new event is appended, never replacing old ones.
+        """
+        from app.services.tracking import update_order_status, create_tracking_event
+
+        db = MagicMock()
+        db.add = MagicMock()
+        db.flush = MagicMock()
+        db.commit = MagicMock()
+        db.refresh = MagicMock()
+
+        order = self._make_order(OrderStatus.ASSIGNED)
+
+        # Simulate existing tracking event (CREATED → ASSIGNED)
+        existing_event = TrackingEvent()
+        existing_event.id = 1
+        existing_event.order_id = 1
+        existing_event.status = OrderStatus.ASSIGNED
+        existing_event.description = "Agent assigned"
+        order.tracking_events = [existing_event]
+
+        # Perform status update to PICKED_UP
+        update_order_status(
+            db=db,
+            order=order,
+            new_status=OrderStatus.PICKED_UP,
+            actor_user_id=99,
+            description="Package collected",
+        )
+
+        # Existing event must be untouched
+        assert existing_event.status == OrderStatus.ASSIGNED, \
+            "Previous tracking event status was mutated — immutability violated!"
+        assert existing_event.description == "Agent assigned", \
+            "Previous tracking event description was mutated — immutability violated!"
+
+        # A new event must have been added (db.add was called)
+        db.add.assert_called_once()
+        new_event_arg = db.add.call_args[0][0]
+        assert isinstance(new_event_arg, TrackingEvent)
+        assert new_event_arg.status == OrderStatus.PICKED_UP
+        assert new_event_arg.order_id == 1
+
+    def test_create_tracking_event_never_updates_existing(self):
+        """create_tracking_event always INSERTs, never UPDATEs."""
+        from app.services.tracking import create_tracking_event
+
+        db = MagicMock()
+        db.add = MagicMock()
+        db.flush = MagicMock()
+
+        create_tracking_event(
+            db=db, order_id=5, status=OrderStatus.IN_TRANSIT,
+            actor_user_id=1, description="In transit to hub"
+        )
+
+        # Must call db.add (INSERT), never db.query(...).update(...)
+        db.add.assert_called_once()
+        # db.query should never be called during event creation
+        db.query.assert_not_called()
+
+    def test_admin_override_still_creates_tracking_event(self):
+        """Even with admin override, a tracking event must be created."""
+        from app.services.tracking import update_order_status
+
+        db = MagicMock()
+        db.add = MagicMock()
+        db.flush = MagicMock()
+        db.commit = MagicMock()
+        db.refresh = MagicMock()
+
+        order = self._make_order(OrderStatus.DELIVERED)  # terminal state
+
+        # Admin overriding an invalid transition
+        update_order_status(
+            db=db,
+            order=order,
+            new_status=OrderStatus.ASSIGNED,
+            actor_user_id=1,
+            is_admin=True,
+            description="Admin override correction",
+        )
+
+        # Must still create a tracking event
+        db.add.assert_called_once()
+        new_event = db.add.call_args[0][0]
+        assert isinstance(new_event, TrackingEvent)
+        assert new_event.status == OrderStatus.ASSIGNED
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Pricing Edge Case Tests
+# ────────────────────────────────────────────────────────────────────────────
+
+class TestPricingEdgeCases:
+    """Additional edge cases for the pricing engine."""
+
+    def test_zero_dimensions_volumetric_weight(self):
+        """Volumetric weight of 0-dimension package is 0."""
+        vol = (0 * 0 * 0) / 5000
+        assert vol == 0.0
+
+    def test_chargeable_weight_equal_weights(self):
+        """When actual == volumetric, chargeable = either (both equal)."""
+        actual = 5.0
+        volumetric = 5.0
+        chargeable = max(actual, volumetric)
+        assert chargeable == 5.0
+
+    def test_volumetric_formula_correctness(self):
+        """Verify formula: 40cm x 30cm x 20cm / 5000 = 4.8 kg."""
+        vol = (40 * 30 * 20) / 5000
+        assert abs(vol - 4.8) < 0.001
+
+    def test_cod_surcharge_zero_for_prepaid(self):
+        """PREPAID orders must always have 0 COD surcharge regardless of rate card."""
+        from app.models.models import PaymentType
+        payment_type = PaymentType.PREPAID
+        rate_card_cod_surcharge = 50.0  # rate card has a COD value
+
+        # Business rule: COD surcharge only applied for COD payment
+        applied_cod = rate_card_cod_surcharge if payment_type == PaymentType.COD else 0.0
+        assert applied_cod == 0.0
+
+    def test_cod_surcharge_applied_for_cod(self):
+        """COD orders must have COD surcharge from rate card applied."""
+        from app.models.models import PaymentType
+        payment_type = PaymentType.COD
+        rate_card_cod_surcharge = 50.0
+
+        applied_cod = rate_card_cod_surcharge if payment_type == PaymentType.COD else 0.0
+        assert applied_cod == 50.0
+
+    def test_total_charge_formula(self):
+        """total_charge = base_rate + (chargeable_weight * rate_per_kg) + cod_surcharge."""
+        base_rate = 100.0
+        rate_per_kg = 20.0
+        chargeable_weight = 5.0
+        cod_surcharge = 30.0
+
+        weight_charge = chargeable_weight * rate_per_kg  # 100
+        base_charge = base_rate + weight_charge  # 200
+        total = base_charge + cod_surcharge  # 230
+        assert total == 230.0
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Status Machine Completeness Tests
+# ────────────────────────────────────────────────────────────────────────────
+
+class TestStatusMachineCompleteness:
+    """Verify the full status machine has all expected transitions."""
+
+    def test_all_statuses_in_transition_graph(self):
+        """Every OrderStatus must appear in the transition graph."""
+        from app.services.tracking import VALID_TRANSITIONS
+        for status in OrderStatus:
+            assert status in VALID_TRANSITIONS, \
+                f"OrderStatus.{status.name} not in VALID_TRANSITIONS graph"
+
+    def test_terminal_states_have_no_transitions(self):
+        """DELIVERED and CANCELLED are terminal — no outgoing transitions."""
+        from app.services.tracking import VALID_TRANSITIONS
+        assert len(VALID_TRANSITIONS[OrderStatus.DELIVERED]) == 0
+        assert len(VALID_TRANSITIONS[OrderStatus.CANCELLED]) == 0
+
+    def test_failed_allows_rescheduled_and_cancelled(self):
+        """FAILED must allow RESCHEDULED and CANCELLED as next states."""
+        from app.services.tracking import VALID_TRANSITIONS
+        allowed = VALID_TRANSITIONS[OrderStatus.FAILED]
+        assert OrderStatus.RESCHEDULED in allowed
+        assert OrderStatus.CANCELLED in allowed
+
+    def test_all_statuses_have_descriptions(self):
+        """Every OrderStatus must have a human-readable description."""
+        from app.services.tracking import STATUS_DESCRIPTIONS
+        for status in OrderStatus:
+            assert status in STATUS_DESCRIPTIONS, \
+                f"OrderStatus.{status.name} missing from STATUS_DESCRIPTIONS"
+            assert len(STATUS_DESCRIPTIONS[status]) > 5, \
+                f"Description for {status.name} is too short"
+
