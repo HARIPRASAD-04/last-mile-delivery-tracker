@@ -6,10 +6,10 @@ import { DashboardLayout, PageHeader } from '@/components/layout/Sidebar';
 import { StatCard, Card, StatusBadge, LoadingState, Button } from '@/components/ui';
 import { admin as adminApi } from '@/lib/api';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
-import type { AdminDashboard, Order } from '@/types';
+import type { AdminDashboard, Order, ControlTowerSummary } from '@/types';
 import {
   Package, Users, TrendingUp, AlertCircle, Truck, DollarSign,
-  RefreshCw, ArrowRight
+  RefreshCw, ArrowRight, AlertTriangle, ShieldAlert, UserCheck, Activity
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -34,6 +34,7 @@ export default function AdminDashboardPage() {
   const { user, loading: authLoading, isAdmin } = useAuth();
   const router = useRouter();
   const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
+  const [controlTower, setControlTower] = useState<ControlTowerSummary | null>(null);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,12 +45,14 @@ export default function AdminDashboardPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [dash, ordersRes] = await Promise.all([
+      const [dash, ordersRes, ctRes] = await Promise.all([
         adminApi.dashboard() as Promise<AdminDashboard>,
         adminApi.orders({ limit: '5' }) as Promise<any>,
+        adminApi.controlTowerSummary() as Promise<ControlTowerSummary>,
       ]);
       setDashboard(dash);
       setRecentOrders(ordersRes.orders || []);
+      setControlTower(ctRes);
     } catch (e) {
       console.error(e);
     } finally {
@@ -95,7 +98,72 @@ export default function AdminDashboardPage() {
 
         {loading ? <LoadingState /> : dashboard && (
           <>
-            {/* KPI Cards */}
+            {/* Delivery Control Tower Section */}
+            {controlTower && (
+              <div className="mb-10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-[#E0E5EC] shadow-[inset_3px_3px_6px_rgba(163,177,198,0.6),inset_-3px_-3px_6px_rgba(255,255,255,0.5)] text-[#6C63FF]">
+                    <Activity size={18} />
+                  </div>
+                  <div>
+                    <h2
+                      className="text-sm font-bold text-[#3D4852] uppercase tracking-wider"
+                      style={{ fontFamily: 'var(--font-display, Plus Jakarta Sans), sans-serif' }}
+                    >
+                      Delivery Control Tower — Network Summary
+                    </h2>
+                    <p className="text-xs text-[#6B7280]">Real-time database aggregated metrics & risk status</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                  <StatCard
+                    title="Active Deliveries"
+                    value={controlTower.active_deliveries}
+                    icon={<Truck size={20} />}
+                    color="blue"
+                    subtitle="Currently moving through the network"
+                  />
+                  <StatCard
+                    title="At Risk"
+                    value={controlTower.at_risk_deliveries}
+                    icon={<AlertTriangle size={20} />}
+                    color="amber"
+                    subtitle="Risk score ≥ 60"
+                  />
+                  <StatCard
+                    title="High Risk"
+                    value={controlTower.high_risk_deliveries}
+                    icon={<ShieldAlert size={20} />}
+                    color="red"
+                    subtitle="Immediate attention recommended"
+                  />
+                  <StatCard
+                    title="Failed"
+                    value={controlTower.failed_deliveries}
+                    icon={<AlertCircle size={20} />}
+                    color="red"
+                    subtitle="Awaiting resolution"
+                  />
+                  <StatCard
+                    title="Available Agents"
+                    value={controlTower.available_agents}
+                    icon={<UserCheck size={20} />}
+                    color="emerald"
+                    subtitle="Ready for assignment"
+                  />
+                  <StatCard
+                    title="Busy Agents"
+                    value={controlTower.busy_agents}
+                    icon={<Users size={20} />}
+                    color="violet"
+                    subtitle="Currently handling deliveries"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* General Overview KPI Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
               <StatCard title="Total Orders" value={dashboard.total_orders} icon={<Package size={20} />} color="indigo" />
               <StatCard title="Active" value={dashboard.active_deliveries} icon={<Truck size={20} />} color="blue" subtitle="In progress" />

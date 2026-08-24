@@ -11,15 +11,28 @@ from app.models.models import (
 from app.schemas.schemas import (
     ZoneCreate, ZoneUpdate, ZoneOut, AreaCreate, AreaUpdate, AreaOut,
     RateCardCreate, RateCardUpdate, RateCardOut, AgentCreate, AgentUpdate,
-    AgentOut, UserOut, AdminDashboard
+    AgentOut, UserOut, AdminDashboard, ControlTowerSummaryResponse
 )
 from app.auth.jwt import get_current_user, require_admin
 from app.api.orders import serialize_order
+from app.services.control_tower import get_control_tower_summary
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
 
-# ─── Dashboard ───────────────────────────────────────────────────────────────
+# ─── Dashboard & Control Tower ───────────────────────────────────────────────
+
+@router.get("/control-tower/summary", response_model=ControlTowerSummaryResponse)
+def get_control_tower_summary_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """
+    Control Tower Network Summary metrics endpoint.
+    Requires Admin authorization.
+    """
+    return get_control_tower_summary(db)
+
 
 @router.get("/dashboard")
 def get_admin_dashboard(

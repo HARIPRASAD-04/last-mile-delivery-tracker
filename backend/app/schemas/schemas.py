@@ -355,3 +355,15 @@ class AgentDashboard(BaseModel):
     completed: int
     pending: int
     failed: int
+
+
+# ─── Control Tower ───────────────────────────────────────────────────────────
+
+class ControlTowerSummaryResponse(BaseModel):
+    active_deliveries: int
+    at_risk_deliveries: int
+    high_risk_deliveries: int
+    failed_deliveries: int
+    available_agents: int
+    busy_agents: int
+

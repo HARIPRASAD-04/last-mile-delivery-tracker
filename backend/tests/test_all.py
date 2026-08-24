@@ -643,3 +643,105 @@ class TestStatusMachineCompleteness:
             assert len(STATUS_DESCRIPTIONS[status]) > 5, \
                 f"Description for {status.name} is too short"
 
+
+# ────────────────────────────────────────────────────────────────────────────
+# Control Tower Network Summary Tests
+# ────────────────────────────────────────────────────────────────────────────
+
+class TestControlTowerNetworkSummary:
+    """Tests for Control Tower Summary Service and Endpoint."""
+
+    def test_active_deliveries_count(self):
+        """Active deliveries include ASSIGNED, PICKED_UP, IN_TRANSIT, OUT_FOR_DELIVERY."""
+        from app.services.control_tower import get_control_tower_summary
+
+        db = MagicMock()
+        query_mock = db.query.return_value
+        query_mock.filter.return_value.count.return_value = 5
+        query_mock.options.return_value.filter.return_value.all.return_value = []
+
+        summary = get_control_tower_summary(db)
+        assert "active_deliveries" in summary
+        assert "at_risk_deliveries" in summary
+        assert "high_risk_deliveries" in summary
+        assert "failed_deliveries" in summary
+        assert "available_agents" in summary
+        assert "busy_agents" in summary
+
+    def test_at_risk_and_high_risk_calculation(self):
+        """Test calculation of at-risk (>=60) and high-risk (>=80) metrics."""
+        from app.services.control_tower import get_control_tower_summary
+
+        order1 = Order()
+        order1.id = 1
+        order1.status = OrderStatus.IN_TRANSIT
+        order1.pickup_zone_id = 1
+        order1.drop_zone_id = 3
+        order1.delivery_risk_score = 65
+        order1.tracking_events = []
+        order1.assigned_agent_id = None
+        order1.payment_type = PaymentType.COD
+        order1.created_at = __import__('datetime').datetime.now(__import__('datetime').timezone.utc)
+
+        order2 = Order()
+        order2.id = 2
+        order2.status = OrderStatus.OUT_FOR_DELIVERY
+        order2.pickup_zone_id = 1
+        order2.drop_zone_id = 4
+        order2.delivery_risk_score = 85
+        order2.tracking_events = []
+        order2.assigned_agent_id = None
+        order2.payment_type = PaymentType.COD
+        order2.created_at = __import__('datetime').datetime.now(__import__('datetime').timezone.utc)
+
+        db = MagicMock()
+        query_mock = db.query.return_value
+        query_mock.filter.return_value.count.return_value = 2
+        query_mock.options.return_value.filter.return_value.all.return_value = [order1, order2]
+
+        summary = get_control_tower_summary(db)
+        assert summary["at_risk_deliveries"] >= 2
+        assert summary["high_risk_deliveries"] >= 1
+
+    def test_agent_status_counts(self):
+        """Available and busy agent counts are properly calculated."""
+        from app.services.control_tower import get_control_tower_summary
+
+        db = MagicMock()
+        mock_agent_q = MagicMock()
+        mock_agent_q.filter.return_value.count.side_effect = [4, 2]
+
+        def query_side_effect(model):
+            if model == DeliveryAgent:
+                return mock_agent_q
+            mock_q = MagicMock()
+            mock_q.filter.return_value.count.return_value = 0
+            mock_q.options.return_value.filter.return_value.all.return_value = []
+            return mock_q
+
+        db.query.side_effect = query_side_effect
+        summary = get_control_tower_summary(db)
+        assert summary["available_agents"] == 4
+        assert summary["busy_agents"] == 2
+
+
+
+
+    def test_admin_authorization_required(self):
+        """GET /api/admin/control-tower/summary must require Admin authorization."""
+        from app.auth.jwt import require_admin
+        from fastapi import HTTPException
+
+        non_admin_user = User()
+        non_admin_user.role = UserRole.CUSTOMER
+
+        with pytest.raises(HTTPException) as exc:
+            require_admin(current_user=non_admin_user)
+        assert exc.value.status_code == 403
+
+        admin_user = User()
+        admin_user.role = UserRole.ADMIN
+        result = require_admin(current_user=admin_user)
+        assert result.role == UserRole.ADMIN
+
+

@@ -159,3 +159,23 @@ export interface AdminDashboard {
   orders_by_status: Record<string, number>;
   orders_by_zone: Record<string, number>;
 }
+
+export interface ControlTowerSummary {
+  active_deliveries: number;
+  at_risk_deliveries: number;
+  high_risk_deliveries: number;
+  failed_deliveries: number;
+  available_agents: number;
+  busy_agents: number;
+}
+
+
+export interface ControlTowerSummary {
+  active_deliveries: number;
+  at_risk_deliveries: number;
+  high_risk_deliveries: number;
+  failed_deliveries: number;
+  available_agents: number;
+  busy_agents: number;
+}
+

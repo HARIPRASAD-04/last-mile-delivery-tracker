@@ -89,7 +89,9 @@ export const admin = {
   createRate: (data: any) => request('/api/admin/rates', { method: 'POST', body: JSON.stringify(data) }),
   updateRate: (id: number, data: any) => request(`/api/admin/rates/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteRate: (id: number) => request(`/api/admin/rates/${id}`, { method: 'DELETE' }),
+  controlTowerSummary: () => request<import('@/types').ControlTowerSummary>('/api/admin/control-tower/summary'),
 };
+
 
 // ── Agent ─────────────────────────────────────────────────────────────────
 export const agentApi = {
